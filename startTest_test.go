@@ -1,14 +1,11 @@
 package main
 
 import (
-	"crypto/x509"
-	"encoding/pem"
 	"fmt"
-	"os"
+	"testing"
 )
 
-func main() {
-	// OID descriptions
+func TestSomething(t *testing.T) {
 	oids := map[string]string{
 		"1.3.6.1.4.1.57264.1":    "Fulcio",
 		"1.3.6.1.4.1.57264.1.1":  "Issuer (deprecated)",
@@ -71,54 +68,19 @@ func main() {
 	}
 }
 
-func getOIDs(filename string) map[string][]byte {
-	data, err := os.ReadFile(filename)
-	if err == nil {
-		block, _ := pem.Decode(data)
-		certificate, _ := x509.ParseCertificate(block.Bytes)
+func TestAnotherCert(t *testing.T) {
+	oids := map[string]string{
+		"2.5.29.17": "Subject Alternative Name",
+	}
+	// Sample target byte values for each enumerated OID
+	targetByteValues := map[string][]byte{
+		"2.5.29.17": []byte{70, 71, 72},
+	}
+	oidValues := getOIDs("./certs/github.com.cer")
+	err := ApplyPolicy(oidValues, oids, targetByteValues)
 
-		// Collect OIDs and their values
-		oidValues := make(map[string][]byte)
-		for _, ext := range certificate.Extensions {
-			oidValues[ext.Id.String()] = ext.Value
-		}
-		return oidValues
-	} else {
+	if err != nil {
 		fmt.Println(err)
 	}
-	return nil
-}
 
-func ApplyPolicy(oidValues map[string][]byte, oids map[string]string, targetByteValues map[string][]byte) error {
-	// Check if OIDs match and compare values
-	for oid, desc := range oids {
-		value, ok := oidValues[oid]
-		fmt.Printf("OID: %s (%s)\n", oid, desc)
-		if ok {
-			// Compare value with sample target byte value
-			targetValue, found := targetByteValues[oid]
-			if found {
-				fmt.Printf("Match determination: %t\n", compareValue(value, targetValue))
-			} else {
-				fmt.Println("No sample target byte value found for this OID.")
-			}
-		} else {
-			fmt.Println("OID not present in the certificate.")
-		}
-		fmt.Println()
-	}
-	return nil
-}
-
-// compareValue compares two byte arrays for equality
-func compareValue(value []byte, target []byte) bool {
-	if len(value) != len(target) {
-		return false
-	}
-	for i := range value {
-		if value[i] != target[i] {
-			return false
-		}
-	}
-	return true
 }
