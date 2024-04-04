@@ -1,14 +1,11 @@
 package main
 
 import (
-	"crypto/x509"
-	"encoding/pem"
+	"testing"
 	"fmt"
-	"os"
 )
 
-func main() {
-	// OID descriptions
+func TestSomething(t *testing.T) {
 	oids := map[string]string{
 		"1.3.6.1.4.1.57264.1":    "Fulcio",
 		"1.3.6.1.4.1.57264.1.1":  "Issuer (deprecated)",
@@ -71,60 +68,66 @@ func main() {
 	}
 }
 
-func getOIDs(filename string) map[string][]byte {
-	data, err := os.ReadFile(filename)
-	if err == nil {
-		block, _ := pem.Decode(data)
-		certificate, _ := x509.ParseCertificate(block.Bytes)
+func TestAnotherCert(t *testing.T) {
+	oids := map[string]string{
+		"2.5.29.17": "Subject Alternative Name",
+	}
+	// Sample target byte values for each enumerated OID
+	targetByteValues := map[string][]byte{
+		"2.5.29.17": []byte{70, 71, 72},
+	}
+	oidValues := getOIDs("./certs/github.com.cer")
+	err := ApplyPolicy(oidValues, oids, targetByteValues)
 
-		// Collect OIDs and their values
-		oidValues := make(map[string][]byte)
-		for _, ext := range certificate.Extensions {
-			oidValues[ext.Id.String()] = ext.Value
-		}
-		return oidValues
-	} else {
+	if err != nil {
 		fmt.Println(err)
 	}
-	return nil
 
 }
 
-func ApplyPolicy(oidValues map[string][]byte, oids map[string]string, targetByteValues map[string][]byte) error {
-	for oid, _ := range oids {
-		value, ok := oidValues[oid]
-		if !ok {
-			// Case 1: OID does not exist
-			return fmt.Errorf("OID %s not present in the certificate", oid)
-		}
+// Correctly structured test data
+var mockOIDsExist = getOIDs("./certs/github.com.cer")
 
-		// OID exists, check if it matches the target value
+// Correct descriptions for OIDs
+var oids = map[string]string{
+	"2.5.29.17": "Subject Alternative Name", // Use real descriptions as needed
+}
+
+// Target byte values for OIDs
+var targetByteValues = map[string][]byte{
+	"2.5.29.17": []byte{48, 28, 130, 10, 103, 105, 116, 104, 117, 98, 46, 99, 111, 109, 130, 14, 119, 119, 119, 46, 103, 105, 116, 104, 117, 98, 46, 99, 111, 109}, // Assuming this is the correct byte array for this OID
+}
+
+var wrongTargetByteValues = map[string][]byte{
+	"2.5.29.17": []byte{4, 5, 6}, // Wrong value to trigger an error in test
+}
+
+func TestExists(t *testing.T) {
 	
-		targetValue, found := targetByteValues[oid]
-		if !found {
-			// No target byte value for this OID (this might not be an error depending on your requirements)
-			fmt.Errorf("No sample target byte value found for this OID: %s", oid)
-			continue
-		}
-
-		if !compareValue(value, targetValue) {
-			// Case 2: Exists with wrong value
-			return fmt.Errorf("OID %s exists but does not match the expected value", oid)
-		}
-		// Implicit Case 3: Exists and matches, no action required unless you want to explicitly check for an error condition
+	err := ApplyPolicy(mockOIDsExist, oids, targetByteValues)
+	if err != nil {
+		t.Errorf("OID exists: Expected no error for existing OID with correct value, got: %s", err)
 	}
-	return nil
 }
 
-// compareValue compares two byte arrays for equality
-func compareValue(value []byte, target []byte) bool {
-	if len(value) != len(target) {
-		return false
+func TestExistsWithWrongValue(t *testing.T) {
+	err := ApplyPolicy(mockOIDsExist, oids, wrongTargetByteValues)
+	if err == nil {
+		t.Error("OID exists with wrong value: Expected an error for existing OID with wrong value, got none")
 	}
-	for i := range value {
-		if value[i] != target[i] {
-			return false
-		}
+}
+
+func TestDoesNotExist(t *testing.T) {
+	
+	mockOIDsMissing := map[string][]byte{
+		"2.5.29.14": []byte{1, 2, 3}, // Present
 	}
-	return true
+	missingOIDs := map[string]string{
+		"1.3.6.1.4.1.99999": "Nonexistent OID", // This OID is intended to not exist in 'mockOIDsMissing'
+	}
+
+	err := ApplyPolicy(mockOIDsMissing, missingOIDs, targetByteValues) // Using 'targetByteValues' for simplicity
+	if err == nil {
+		t.Error("OID does not exist: Expected an error for non-existent OID, got none")
+	}
 }
