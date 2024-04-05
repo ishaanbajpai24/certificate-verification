@@ -64,6 +64,7 @@ func main() {
 		"1.3.6.1.4.1.57264.2":    []byte{70, 71, 72},
 	}
 	oidValues := getOIDs("./certs/github.com.cer")
+
 	err := ApplyPolicy(oidValues, oids, targetByteValues)
 
 	if err != nil {
@@ -87,12 +88,43 @@ func getOIDs(filename string) map[string][]byte {
 		fmt.Println(err)
 	}
 	return nil
+}
 
+func ApplySigstorePolicy(oidValues map[string][]byte, targetByteValues map[string][]byte) error {
+	oids := map[string]string{
+		"1.3.6.1.4.1.57264.1":    "Fulcio",
+		"1.3.6.1.4.1.57264.1.1":  "Issuer (deprecated)",
+		"1.3.6.1.4.1.57264.1.2":  "GitHub Workflow Trigger (deprecated)",
+		"1.3.6.1.4.1.57264.1.3":  "GitHub Workflow SHA (deprecated)",
+		"1.3.6.1.4.1.57264.1.4":  "GitHub Workflow Name (deprecated)",
+		"1.3.6.1.4.1.57264.1.5":  "GitHub Workflow Repository (deprecated)",
+		"1.3.6.1.4.1.57264.1.6":  "GitHub Workflow Ref (deprecated)",
+		"1.3.6.1.4.1.57264.1.7":  "OtherName SAN",
+		"1.3.6.1.4.1.57264.1.8":  "Issuer (V2)",
+		"1.3.6.1.4.1.57264.1.9":  "Build Signer URI",
+		"1.3.6.1.4.1.57264.1.10": "Build Signer Digest",
+		"1.3.6.1.4.1.57264.1.11": "Runner Environment",
+		"1.3.6.1.4.1.57264.1.12": "Source Repository URI",
+		"1.3.6.1.4.1.57264.1.13": "Source Repository Digest",
+		"1.3.6.1.4.1.57264.1.14": "Source Repository Ref",
+		"1.3.6.1.4.1.57264.1.15": "Source Repository Identifier",
+		"1.3.6.1.4.1.57264.1.16": "Source Repository Owner URI",
+		"1.3.6.1.4.1.57264.1.17": "Source Repository Owner Identifier",
+		"1.3.6.1.4.1.57264.1.18": "Build Config URI",
+		"1.3.6.1.4.1.57264.1.19": "Build Config Digest",
+		"1.3.6.1.4.1.57264.1.20": "Build Trigger",
+		"1.3.6.1.4.1.57264.1.21": "Run Invocation URI",
+		"1.3.6.1.4.1.57264.1.22": "Source Repository Visibility At Signing",
+		"1.3.6.1.4.1.57264.2":    "Policy OID for Sigstore Timestamp Authority",
+	}
+
+	return ApplyPolicy(oidValues, oids, targetByteValues)
 }
 
 func ApplyPolicy(oidValues map[string][]byte, oids map[string]string, targetByteValues map[string][]byte) error {
 	for oid, _ := range oids {
 		value, ok := oidValues[oid]
+	
 		if !ok {
 			// Case 1: OID does not exist
 			return fmt.Errorf("OID %s not present in the certificate", oid)

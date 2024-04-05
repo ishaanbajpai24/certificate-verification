@@ -4,6 +4,22 @@ import (
 	"testing"
 	"fmt"
 )
+// Correctly structured test data
+var mockOIDsExist = getOIDs("./certs/github.com.cer")
+
+// Correct descriptions for OIDs
+var oids = map[string]string{
+	"2.5.29.17": "Subject Alternative Name", // Use real descriptions as needed
+}
+
+// Target byte values for OIDs
+var targetByteValues = map[string][]byte{
+	"2.5.29.17": []byte{48, 28, 130, 10, 103, 105, 116, 104, 117, 98, 46, 99, 111, 109, 130, 14, 119, 119, 119, 46, 103, 105, 116, 104, 117, 98, 46, 99, 111, 109}, // Assuming this is the correct byte array for this OID
+}
+
+var wrongTargetByteValues = map[string][]byte{
+	"2.5.29.17": []byte{4, 5, 6}, // Wrong value to trigger an error in test
+}
 
 func TestSomething(t *testing.T) {
 	oids := map[string]string{
@@ -85,39 +101,26 @@ func TestAnotherCert(t *testing.T) {
 
 }
 
-// Correctly structured test data
-var mockOIDsExist = getOIDs("./certs/github.com.cer")
 
-// Correct descriptions for OIDs
-var oids = map[string]string{
-	"2.5.29.17": "Subject Alternative Name", // Use real descriptions as needed
-}
 
-// Target byte values for OIDs
-var targetByteValues = map[string][]byte{
-	"2.5.29.17": []byte{48, 28, 130, 10, 103, 105, 116, 104, 117, 98, 46, 99, 111, 109, 130, 14, 119, 119, 119, 46, 103, 105, 116, 104, 117, 98, 46, 99, 111, 109}, // Assuming this is the correct byte array for this OID
-}
-
-var wrongTargetByteValues = map[string][]byte{
-	"2.5.29.17": []byte{4, 5, 6}, // Wrong value to trigger an error in test
-}
-
-func TestExists(t *testing.T) {
-	
+func TestOIDExists(t *testing.T) {
 	err := ApplyPolicy(mockOIDsExist, oids, targetByteValues)
 	if err != nil {
 		t.Errorf("OID exists: Expected no error for existing OID with correct value, got: %s", err)
 	}
 }
 
-func TestExistsWithWrongValue(t *testing.T) {
+
+func TestOIDExistsWithWrongValue(t *testing.T) {
+
 	err := ApplyPolicy(mockOIDsExist, oids, wrongTargetByteValues)
 	if err == nil {
 		t.Error("OID exists with wrong value: Expected an error for existing OID with wrong value, got none")
 	}
 }
 
-func TestDoesNotExist(t *testing.T) {
+
+func TestOIDDoesNotExist(t *testing.T) {
 	
 	mockOIDsMissing := map[string][]byte{
 		"2.5.29.14": []byte{1, 2, 3}, // Present
