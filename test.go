@@ -63,8 +63,17 @@ func main() {
 		"1.3.6.1.4.1.57264.1.22": []byte{67, 68, 69},
 		"1.3.6.1.4.1.57264.2":    []byte{70, 71, 72},
 	}
+	oidValues := getOIDs("./certs/github.com.cer")
+	
+	err := ApplyPolicy(oidValues, oids, targetByteValues)
 
-	data, err := os.ReadFile("./certs/github.com.cer")
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func getOIDs(filename string) map[string][]byte {
+	data, err := os.ReadFile(filename)
 	if err == nil {
 		block, _ := pem.Decode(data)
 		certificate, _ := x509.ParseCertificate(block.Bytes)
@@ -74,29 +83,69 @@ func main() {
 		for _, ext := range certificate.Extensions {
 			oidValues[ext.Id.String()] = ext.Value
 		}
-
-		// Check if OIDs match and compare values
-		for oid, desc := range oids {
-			value, ok := oidValues[oid]
-			fmt.Printf("OID: %s (%s)\n", oid, desc)
-			if ok {
-				// Compare value with sample target byte value
-				targetValue, found := targetByteValues[oid]
-				if found {
-					fmt.Printf("Match determination: %t\n", compareValue(value, targetValue))
-				} else {
-					fmt.Println("No sample target byte value found for this OID.")
-				}
-			} else {
-				fmt.Println("OID not present in the certificate.")
-			}
-			fmt.Println()
-		}
-	}
-
-	if err != nil {
+		return oidValues
+	} else {
 		fmt.Println(err)
 	}
+	return nil
+
+}
+func ApplySigstorePolicy(oidValues map[string][]byte, targetByteValues map[string][]byte) error {
+	oids := map[string]string{
+		"1.3.6.1.4.1.57264.1":    "Fulcio",
+		"1.3.6.1.4.1.57264.1.1":  "Issuer (deprecated)",
+		"1.3.6.1.4.1.57264.1.2":  "GitHub Workflow Trigger (deprecated)",
+		"1.3.6.1.4.1.57264.1.3":  "GitHub Workflow SHA (deprecated)",
+		"1.3.6.1.4.1.57264.1.4":  "GitHub Workflow Name (deprecated)",
+		"1.3.6.1.4.1.57264.1.5":  "GitHub Workflow Repository (deprecated)",
+		"1.3.6.1.4.1.57264.1.6":  "GitHub Workflow Ref (deprecated)",
+		"1.3.6.1.4.1.57264.1.7":  "OtherName SAN",
+		"1.3.6.1.4.1.57264.1.8":  "Issuer (V2)",
+		"1.3.6.1.4.1.57264.1.9":  "Build Signer URI",
+		"1.3.6.1.4.1.57264.1.10": "Build Signer Digest",
+		"1.3.6.1.4.1.57264.1.11": "Runner Environment",
+		"1.3.6.1.4.1.57264.1.12": "Source Repository URI",
+		"1.3.6.1.4.1.57264.1.13": "Source Repository Digest",
+		"1.3.6.1.4.1.57264.1.14": "Source Repository Ref",
+		"1.3.6.1.4.1.57264.1.15": "Source Repository Identifier",
+		"1.3.6.1.4.1.57264.1.16": "Source Repository Owner URI",
+		"1.3.6.1.4.1.57264.1.17": "Source Repository Owner Identifier",
+		"1.3.6.1.4.1.57264.1.18": "Build Config URI",
+		"1.3.6.1.4.1.57264.1.19": "Build Config Digest",
+		"1.3.6.1.4.1.57264.1.20": "Build Trigger",
+		"1.3.6.1.4.1.57264.1.21": "Run Invocation URI",
+		"1.3.6.1.4.1.57264.1.22": "Source Repository Visibility At Signing",
+		"1.3.6.1.4.1.57264.2":    "Policy OID for Sigstore Timestamp Authority",
+	}
+
+	return ApplyPolicy(oidValues, oids, targetByteValues)
+}
+
+func ApplyPolicy(oidValues map[string][]byte, oids map[string]string, targetByteValues map[string][]byte) error {
+	for oid, _ := range oids {
+		value, ok := oidValues[oid]
+	
+		if !ok {
+			// Case 1: OID does not exist
+			return fmt.Errorf("OID %s not present in the certificate", oid)
+		}
+
+		// OID exists, check if it matches the target value
+	
+		targetValue, found := targetByteValues[oid]
+		if !found {
+			// No target byte value for this OID (this might not be an error depending on your requirements)
+			fmt.Errorf("No sample target byte value found for this OID: %s", oid)
+			continue
+		}
+
+		if !compareValue(value, targetValue) {
+			// Case 2: Exists with wrong value
+			return fmt.Errorf("OID %s exists but does not match the expected value", oid)
+		}
+		// Implicit Case 3: Exists and matches, no action required unless you want to explicitly check for an error condition
+	}
+	return nil
 }
 
 // compareValue compares two byte arrays for equality
