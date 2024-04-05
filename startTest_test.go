@@ -104,19 +104,21 @@ func TestAnotherCert(t *testing.T) {
 
 
 func TestOIDExists(t *testing.T) {
-	
 	err := ApplyPolicy(mockOIDsExist, oids, targetByteValues)
 	if err != nil {
 		t.Errorf("OID exists: Expected no error for existing OID with correct value, got: %s", err)
 	}
 }
 
+
 func TestOIDExistsWithWrongValue(t *testing.T) {
+
 	err := ApplyPolicy(mockOIDsExist, oids, wrongTargetByteValues)
 	if err == nil {
 		t.Error("OID exists with wrong value: Expected an error for existing OID with wrong value, got none")
 	}
 }
+
 
 func TestOIDDoesNotExist(t *testing.T) {
 	
@@ -132,4 +134,3 @@ func TestOIDDoesNotExist(t *testing.T) {
 		t.Error("OID does not exist: Expected an error for non-existent OID, got none")
 	}
 }
-

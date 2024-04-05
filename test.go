@@ -64,7 +64,7 @@ func main() {
 		"1.3.6.1.4.1.57264.2":    []byte{70, 71, 72},
 	}
 	oidValues := getOIDs("./certs/github.com.cer")
-	
+
 	err := ApplyPolicy(oidValues, oids, targetByteValues)
 
 	if err != nil {
@@ -88,8 +88,8 @@ func getOIDs(filename string) map[string][]byte {
 		fmt.Println(err)
 	}
 	return nil
-
 }
+
 func ApplySigstorePolicy(oidValues map[string][]byte, targetByteValues map[string][]byte) error {
 	oids := map[string]string{
 		"1.3.6.1.4.1.57264.1":    "Fulcio",
